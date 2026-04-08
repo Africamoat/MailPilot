@@ -24,7 +24,9 @@
       "mcp__claude_ai_Supabase__execute_sql",
       "mcp__claude_ai_Supabase__get_project_url",
       "Bash(git push:*)",
-      "mcp__claude_ai_Supabase__get_project"
+      "mcp__claude_ai_Supabase__get_project",
+      "Bash(printf \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZkamRvcGlrZmZxZnlkd3B5Y3BqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NDIxMTEsImV4cCI6MjA5MTIxODExMX0.Z_51QNL3CKuA3tgeLJdvsJh4b03yFSxiziqjwNwWH1w\")",
+      "Bash(printf \"mailpilot-cron-secret-2026\")"
     ]
   }
 }

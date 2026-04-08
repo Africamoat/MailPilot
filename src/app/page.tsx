@@ -79,6 +79,15 @@ export default function Dashboard() {
     }
   }
 
+  async function deleteContact(id: string) {
+    if (!confirm("Supprimer ce contact ?")) return;
+    const res = await fetch(`/api/contact/${id}`, { method: "DELETE" });
+    if (res.ok) {
+      notify("success", "Contact supprimé");
+      fetchContacts();
+    }
+  }
+
   async function sendSingle(id: string) {
     const res = await fetch(`/api/contact/${id}`, {
       method: "PATCH",
@@ -274,6 +283,12 @@ export default function Dashboard() {
                               </button>
                             </>
                           )}
+                          <button
+                            onClick={() => deleteContact(c.id)}
+                            className="px-2 py-1 text-xs bg-red-50 text-red-700 rounded hover:bg-red-100"
+                          >
+                            Supprimer
+                          </button>
                         </div>
                       </td>
                     </tr>
