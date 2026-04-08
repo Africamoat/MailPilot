@@ -18,9 +18,12 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
       fetch("/api/settings")
         .then((r) => r.json())
         .then((data) => {
-          setSenderEmail(data.sender_email || "");
-          setSenderName(data.sender_name || "");
-        });
+          if (data && !data.error) {
+            setSenderEmail(data.sender_email || "");
+            setSenderName(data.sender_name || "");
+          }
+        })
+        .catch(() => {});
     }
   }, [open]);
 
@@ -31,20 +34,24 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
     setLoading(true);
     setMessage("");
 
-    const res = await fetch("/api/settings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        sender_email: senderEmail,
-        sender_name: senderName,
-      }),
-    });
+    try {
+      const res = await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sender_email: senderEmail,
+          sender_name: senderName,
+        }),
+      });
 
-    const data = await res.json();
-    if (!res.ok) {
-      setMessage(`Erreur: ${data.error}`);
-    } else {
-      setMessage("Configuration sauvegardée");
+      const data = await res.json();
+      if (!res.ok) {
+        setMessage(`Erreur: ${data.error}`);
+      } else {
+        setMessage("Configuration sauvegardée");
+      }
+    } catch {
+      setMessage("Erreur réseau");
     }
     setLoading(false);
   }
