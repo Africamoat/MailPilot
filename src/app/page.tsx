@@ -9,8 +9,16 @@ import { AddContactModal } from "@/components/AddContactModal";
 import { SettingsModal } from "@/components/SettingsModal";
 import { ScriptsModal } from "@/components/ScriptsModal";
 
+interface Stats {
+  total: number;
+  not_contacted: number;
+  contacted: number;
+  follow_up: number;
+  replied: number;
+}
+
 export default function Dashboard() {
-  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [allContacts, setAllContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [filterCountry, setFilterCountry] = useState("");
@@ -24,21 +32,34 @@ export default function Dashboard() {
     text: string;
   } | null>(null);
 
+  // Always fetch ALL contacts for stats, then filter client-side
   const fetchContacts = useCallback(async () => {
     setLoading(true);
-    const params = new URLSearchParams();
-    if (filterCountry) params.set("country", filterCountry);
-    if (filterStatus) params.set("status", filterStatus);
-
-    const res = await fetch(`/api/contacts?${params}`);
+    const res = await fetch("/api/contacts");
     const data = await res.json();
-    setContacts(Array.isArray(data) ? data : []);
+    setAllContacts(Array.isArray(data) ? data : []);
     setLoading(false);
-  }, [filterCountry, filterStatus]);
+  }, []);
 
   useEffect(() => {
     fetchContacts();
   }, [fetchContacts]);
+
+  // Client-side filtering
+  const filteredContacts = allContacts.filter((c) => {
+    if (filterCountry && c.country !== filterCountry) return false;
+    if (filterStatus && c.status !== filterStatus) return false;
+    return true;
+  });
+
+  // Stats always from ALL contacts
+  const stats: Stats = {
+    total: allContacts.length,
+    not_contacted: allContacts.filter((c) => c.status === "not_contacted").length,
+    contacted: allContacts.filter((c) => c.status === "contacted").length,
+    follow_up: allContacts.filter((c) => c.status === "follow_up").length,
+    replied: allContacts.filter((c) => c.status === "replied").length,
+  };
 
   function notify(type: "success" | "error", text: string) {
     setNotification({ type, text });
@@ -95,18 +116,16 @@ export default function Dashboard() {
       body: JSON.stringify({ status: "follow_up" }),
     });
     if (res.ok) {
-      await fetch("/api/send", { method: "POST" });
-      notify("success", "Email envoyé");
+      const sendRes = await fetch("/api/send", { method: "POST" });
+      const data = await sendRes.json();
+      if (sendRes.ok && data.sent > 0) {
+        notify("success", "Email envoyé");
+      } else {
+        notify("error", data.error || `Échec: ${data.failed || 0} erreur(s)`);
+      }
       fetchContacts();
     }
   }
-
-  const stats = {
-    total: contacts.length,
-    not_contacted: contacts.filter((c) => c.status === "not_contacted").length,
-    contacted: contacts.filter((c) => c.status === "contacted").length,
-    replied: contacts.filter((c) => c.status === "replied").length,
-  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -162,15 +181,12 @@ export default function Dashboard() {
       </header>
 
       <main className="max-w-7xl mx-auto p-6">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
           {[
             { label: "Total", value: stats.total, color: "bg-white" },
-            {
-              label: "Non contactés",
-              value: stats.not_contacted,
-              color: "bg-gray-50",
-            },
+            { label: "Non contactés", value: stats.not_contacted, color: "bg-gray-50" },
             { label: "Contactés", value: stats.contacted, color: "bg-blue-50" },
+            { label: "Relances", value: stats.follow_up, color: "bg-yellow-50" },
             { label: "Répondus", value: stats.replied, color: "bg-green-50" },
           ].map((s) => (
             <div key={s.label} className={`${s.color} border rounded-lg p-4`}>
@@ -214,17 +230,11 @@ export default function Dashboard() {
                 <tr className="border-b bg-gray-50">
                   <th className="text-left px-4 py-3 font-medium">Nom</th>
                   <th className="text-left px-4 py-3 font-medium">Email</th>
-                  <th className="text-left px-4 py-3 font-medium">
-                    Entreprise
-                  </th>
+                  <th className="text-left px-4 py-3 font-medium">Entreprise</th>
                   <th className="text-left px-4 py-3 font-medium">Pays</th>
                   <th className="text-left px-4 py-3 font-medium">Statut</th>
-                  <th className="text-left px-4 py-3 font-medium">
-                    Dernier contact
-                  </th>
-                  <th className="text-left px-4 py-3 font-medium">
-                    Prochaine relance
-                  </th>
+                  <th className="text-left px-4 py-3 font-medium">Dernier contact</th>
+                  <th className="text-left px-4 py-3 font-medium">Prochaine relance</th>
                   <th className="text-left px-4 py-3 font-medium">Actions</th>
                 </tr>
               </thead>
@@ -235,14 +245,14 @@ export default function Dashboard() {
                       Chargement...
                     </td>
                   </tr>
-                ) : contacts.length === 0 ? (
+                ) : filteredContacts.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="text-center py-8 text-gray-400">
                       Aucun contact
                     </td>
                   </tr>
                 ) : (
-                  contacts.map((c) => (
+                  filteredContacts.map((c) => (
                     <tr key={c.id} className="border-b hover:bg-gray-50">
                       <td className="px-4 py-3 font-medium">{c.name}</td>
                       <td className="px-4 py-3 text-gray-600">{c.email}</td>
@@ -253,16 +263,12 @@ export default function Dashboard() {
                       </td>
                       <td className="px-4 py-3 text-gray-500">
                         {c.last_contacted_at
-                          ? new Date(c.last_contacted_at).toLocaleDateString(
-                              "fr-FR"
-                            )
+                          ? new Date(c.last_contacted_at).toLocaleDateString("fr-FR")
                           : "\u2014"}
                       </td>
                       <td className="px-4 py-3 text-gray-500">
                         {c.next_follow_up_at
-                          ? new Date(c.next_follow_up_at).toLocaleDateString(
-                              "fr-FR"
-                            )
+                          ? new Date(c.next_follow_up_at).toLocaleDateString("fr-FR")
                           : "\u2014"}
                       </td>
                       <td className="px-4 py-3">
