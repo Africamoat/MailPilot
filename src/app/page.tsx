@@ -8,6 +8,7 @@ import { ImportModal } from "@/components/ImportModal";
 import { AddContactModal } from "@/components/AddContactModal";
 import { SettingsModal } from "@/components/SettingsModal";
 import { ScriptsModal } from "@/components/ScriptsModal";
+import { EditableCell } from "@/components/EditableCell";
 
 interface Stats {
   total: number;
@@ -127,6 +128,15 @@ export default function Dashboard() {
       notify("success", "Contact supprimé");
       fetchContacts();
     }
+  }
+
+  async function updateContactField(id: string, field: string, value: string) {
+    await fetch(`/api/contact/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ [field]: value }),
+    });
+    fetchContacts();
   }
 
   async function sendSingle(id: string) {
@@ -278,10 +288,28 @@ export default function Dashboard() {
                 ) : (
                   filteredContacts.map((c) => (
                     <tr key={c.id} className="border-b hover:bg-gray-50">
-                      <td className="px-4 py-3 font-medium">{c.name}</td>
+                      <td className="px-4 py-3 font-medium">
+                        <EditableCell
+                          value={c.name}
+                          onSave={(v) => updateContactField(c.id, "name", v)}
+                          placeholder="Nom"
+                        />
+                      </td>
                       <td className="px-4 py-3 text-gray-600">{c.email}</td>
-                      <td className="px-4 py-3">{c.company}</td>
-                      <td className="px-4 py-3">{c.country}</td>
+                      <td className="px-4 py-3">
+                        <EditableCell
+                          value={c.company}
+                          onSave={(v) => updateContactField(c.id, "company", v)}
+                          placeholder="Entreprise"
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <EditableCell
+                          value={c.country}
+                          onSave={(v) => updateContactField(c.id, "country", v)}
+                          placeholder="Pays"
+                        />
+                      </td>
                       <td className="px-4 py-3">
                         <StatusBadge status={c.status} />
                       </td>
