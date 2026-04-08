@@ -7,9 +7,18 @@ export function personalize(
 
 export function nameFromEmail(email: string): string {
   const local = email.split("@")[0];
-  // Remove dots, numbers, underscores and capitalize
   const clean = local.replace(/[._0-9-]/g, " ").trim().split(/\s+/)[0];
   return clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase();
+}
+
+export function companyFromEmail(email: string): string {
+  const domain = email.split("@")[1] || "";
+  // Remove TLD (.com, .co, .fr, etc.)
+  const name = domain.split(".")[0];
+  if (!name || ["gmail", "yahoo", "hotmail", "outlook", "live", "aol", "icloud", "protonmail"].includes(name.toLowerCase())) {
+    return "";
+  }
+  return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
 }
 
 export function isValidEmail(email: string): boolean {

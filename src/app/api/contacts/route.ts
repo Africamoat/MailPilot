@@ -1,5 +1,5 @@
 import { getSupabase } from "@/lib/supabase";
-import { nameFromEmail } from "@/lib/utils";
+import { nameFromEmail, companyFromEmail } from "@/lib/utils";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     .insert({
       name: name || nameFromEmail(email),
       email: email.toLowerCase().trim(),
-      company: company || "",
+      company: company || companyFromEmail(email),
       country: country || "",
       notes: notes || null,
       status: "not_contacted",

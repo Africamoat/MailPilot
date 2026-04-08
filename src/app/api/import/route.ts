@@ -1,5 +1,5 @@
 import { getSupabase } from "@/lib/supabase";
-import { isValidEmail, nameFromEmail } from "@/lib/utils";
+import { isValidEmail, nameFromEmail, companyFromEmail } from "@/lib/utils";
 import { NextRequest, NextResponse } from "next/server";
 
 interface ImportContact {
@@ -11,8 +11,30 @@ interface ImportContact {
 }
 
 function parseCSV(text: string): ImportContact[] {
-  const lines = text.trim().split("\n");
-  if (lines.length < 2) return [];
+  const lines = text.trim().split("\n").map((l) => l.trim()).filter(Boolean);
+  if (lines.length === 0) return [];
+
+  const firstLine = lines[0].toLowerCase();
+
+  // Check if first line looks like a header
+  const hasHeader = firstLine.includes("email") || firstLine.includes("name") || firstLine.includes("company");
+
+  // If no header and each line looks like a single email, treat as email list
+  if (!hasHeader) {
+    const allEmails = lines.every((l) => l.includes("@") && !l.includes(","));
+    if (allEmails) {
+      return lines.map((email) => ({ email: email.trim() }));
+    }
+  }
+
+  if (!hasHeader || lines.length < 2) {
+    // Try as plain email list separated by commas
+    const emails = text.split(/[,;\n]/).map((e) => e.trim()).filter((e) => e.includes("@"));
+    if (emails.length > 0) {
+      return emails.map((email) => ({ email }));
+    }
+    return [];
+  }
 
   const headers = lines[0].split(",").map((h) => h.trim().toLowerCase());
   const contacts: ImportContact[] = [];
@@ -66,7 +88,7 @@ export async function POST(req: NextRequest) {
   const rows = contacts.map((c) => ({
     name: c.name || nameFromEmail(c.email),
     email: c.email.toLowerCase().trim(),
-    company: c.company || "",
+    company: c.company || companyFromEmail(c.email),
     country: c.country || "",
     notes: c.notes || null,
     status: "not_contacted" as const,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 interface ImportModalProps {
   open: boolean;
@@ -8,12 +8,45 @@ interface ImportModalProps {
   onImported: () => void;
 }
 
+function parseExcelCSV(text: string): string {
+  // Handle semicolon-separated (European Excel export)
+  if (text.includes(";") && !text.includes(",")) {
+    return text.replace(/;/g, ",");
+  }
+  return text;
+}
+
 export function ImportModal({ open, onClose, onImported }: ImportModalProps) {
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [fileName, setFileName] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
 
   if (!open) return null;
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setFileName(file.name);
+    setMessage("");
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const content = ev.target?.result as string;
+      if (file.name.endsWith(".csv") || file.name.endsWith(".txt")) {
+        setText(parseExcelCSV(content));
+      } else if (file.name.endsWith(".json")) {
+        setText(content);
+      } else {
+        setMessage(
+          "Format non supporté. Utilisez .csv ou .json. Pour Excel, exportez d'abord en CSV."
+        );
+      }
+    };
+    reader.readAsText(file);
+  }
 
   async function handleImport() {
     setLoading(true);
@@ -28,7 +61,6 @@ export function ImportModal({ open, onClose, onImported }: ImportModalProps) {
         body = text;
         headers["Content-Type"] = "application/json";
       } catch {
-        // Treat as CSV
         body = text;
         headers["Content-Type"] = "text/csv";
       }
@@ -53,15 +85,52 @@ export function ImportModal({ open, onClose, onImported }: ImportModalProps) {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 w-full max-w-lg mx-4">
         <h2 className="text-lg font-semibold mb-4">Importer des contacts</h2>
-        <p className="text-sm text-gray-500 mb-2">
-          Collez du JSON ou CSV (colonnes: name, email, company, country)
-        </p>
+
+        {/* File upload */}
+        <div className="mb-4">
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".csv,.json,.txt"
+            className="hidden"
+            onChange={handleFileChange}
+          />
+          <button
+            onClick={() => fileRef.current?.click()}
+            className="w-full border-2 border-dashed rounded-lg p-6 text-center hover:bg-gray-50 transition"
+          >
+            <p className="text-sm font-medium text-gray-700">
+              {fileName || "Cliquez pour choisir un fichier"}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">
+              CSV, JSON (seul l&apos;email est obligatoire)
+            </p>
+          </button>
+        </div>
+
+        <div className="relative mb-2">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-200" />
+          </div>
+          <div className="relative flex justify-center text-xs">
+            <span className="bg-white px-2 text-gray-400">ou collez directement</span>
+          </div>
+        </div>
+
         <textarea
-          className="w-full border rounded-lg p-3 h-48 text-sm font-mono"
-          placeholder={`[{"name":"Abou","email":"abou@gmail.com","company":"Aeroby","country":"Côte d'Ivoire"}]`}
+          className="w-full border rounded-lg p-3 h-32 text-sm font-mono"
+          placeholder={`email\nrfk@entreprise.com\nseydi@africamoat.com\njean@company.fr`}
           value={text}
           onChange={(e) => setText(e.target.value)}
         />
+
+        <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-500 mt-2">
+          <strong>Astuce :</strong> Seul l&apos;email est obligatoire. Le nom est extrait
+          automatiquement (rfk@entreprise.com &rarr; Rfk) et l&apos;entreprise aussi
+          (rfk@entreprise.com &rarr; Entreprise). Vous pouvez aussi fournir les colonnes :
+          email, name, company, country.
+        </div>
+
         {message && (
           <p
             className={`text-sm mt-2 ${message.startsWith("Erreur") ? "text-red-600" : "text-green-600"}`}
