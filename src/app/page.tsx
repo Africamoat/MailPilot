@@ -6,6 +6,7 @@ import { COUNTRIES, STATUS_LABELS } from "@/lib/utils";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ImportModal } from "@/components/ImportModal";
 import { AddContactModal } from "@/components/AddContactModal";
+import { SettingsModal } from "@/components/SettingsModal";
 
 export default function Dashboard() {
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -15,6 +16,7 @@ export default function Dashboard() {
   const [filterStatus, setFilterStatus] = useState("");
   const [importOpen, setImportOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [notification, setNotification] = useState<{
     type: "success" | "error";
     text: string;
@@ -113,6 +115,12 @@ export default function Dashboard() {
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <h1 className="text-xl font-bold">MailPilot</h1>
           <div className="flex gap-2">
+            <button
+              onClick={() => setSettingsOpen(true)}
+              className="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50"
+            >
+              Config Email
+            </button>
             <button
               onClick={() => setImportOpen(true)}
               className="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50"
@@ -278,6 +286,10 @@ export default function Dashboard() {
         open={addOpen}
         onClose={() => setAddOpen(false)}
         onAdded={fetchContacts}
+      />
+      <SettingsModal
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
       />
     </div>
   );
