@@ -19,18 +19,33 @@ export function ScriptsModal({ open, onClose }: ScriptsModalProps) {
   const [scripts, setScripts] = useState<Script[]>([]);
   const [activeTab, setActiveTab] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(false);
   const [message, setMessage] = useState("");
 
+  const defaultScripts: Script[] = [
+    { id: "new_0", script_order: 0, name: "Premier contact", subject: "Collaboration avec {{company}}", body: "<p>Bonjour {{name}},</p><p>Je vois que <strong>{{company}}</strong> est basé en {{country}}.</p><p>Cordialement</p>" },
+    { id: "new_1", script_order: 1, name: "Relance 1", subject: "Re: Collaboration avec {{company}}", body: "<p>Bonjour {{name}},</p><p>Je me permets de relancer concernant <strong>{{company}}</strong>.</p><p>Cordialement</p>" },
+    { id: "new_2", script_order: 2, name: "Relance 2 (dernière)", subject: "Dernière tentative — {{company}}", body: "<p>Bonjour {{name}},</p><p>Dernière tentative pour vous joindre.</p><p>Cordialement</p>" },
+  ];
+
   useEffect(() => {
-    if (open) {
+    if (open && scripts.length === 0) {
+      setFetching(true);
       fetch("/api/scripts")
         .then((r) => r.json())
         .then((data) => {
           if (Array.isArray(data) && data.length > 0) {
             setScripts(data);
+          } else {
+            setScripts(defaultScripts);
           }
-        });
+        })
+        .catch(() => {
+          setScripts(defaultScripts);
+        })
+        .finally(() => setFetching(false));
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   if (!open) return null;
@@ -74,8 +89,10 @@ export function ScriptsModal({ open, onClose }: ScriptsModalProps) {
           <code className="bg-gray-100 px-1 rounded">{"{{country}}"}</code>
         </p>
 
-        {scripts.length === 0 ? (
+        {fetching ? (
           <p className="text-gray-400 py-8 text-center">Chargement...</p>
+        ) : scripts.length === 0 ? (
+          <p className="text-gray-400 py-8 text-center">Aucun template</p>
         ) : (
           <>
             <div className="flex gap-1 mb-4 border-b">
