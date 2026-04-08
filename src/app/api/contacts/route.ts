@@ -1,4 +1,5 @@
 import { getSupabase } from "@/lib/supabase";
+import { nameFromEmail } from "@/lib/utils";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
@@ -28,9 +29,9 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const { name, email, company, country, notes } = body;
 
-  if (!name || !email || !company || !country) {
+  if (!email) {
     return NextResponse.json(
-      { error: "name, email, company, country are required" },
+      { error: "email is required" },
       { status: 400 }
     );
   }
@@ -39,10 +40,10 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase
     .from("contacts")
     .insert({
-      name,
+      name: name || nameFromEmail(email),
       email: email.toLowerCase().trim(),
-      company,
-      country,
+      company: company || "",
+      country: country || "",
       notes: notes || null,
       status: "not_contacted",
       has_replied: false,

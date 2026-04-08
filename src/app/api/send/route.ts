@@ -21,15 +21,12 @@ export async function POST() {
     return NextResponse.json({ sent: 0, message: "Aucun contact éligible" });
   }
 
-  // Filter out contacts already contacted today
   const eligible = contacts.filter((c) => !isToday(c.last_contacted_at));
-
-  // Batch: max 20
   const batch = eligible.slice(0, 20);
   const results: { email: string; success: boolean; error?: string }[] = [];
 
   for (const contact of batch) {
-    const script = getScriptByFollowUpCount(contact.follow_up_count);
+    const script = await getScriptByFollowUpCount(contact.follow_up_count);
     const vars = {
       name: contact.name,
       company: contact.company,

@@ -22,7 +22,9 @@
       "Bash(gh repo:*)",
       "mcp__claude_ai_Supabase__create_project",
       "mcp__claude_ai_Supabase__execute_sql",
-      "mcp__claude_ai_Supabase__get_project_url"
+      "mcp__claude_ai_Supabase__get_project_url",
+      "Bash(git push:*)",
+      "mcp__claude_ai_Supabase__get_project"
     ]
   }
 }

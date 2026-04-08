@@ -5,6 +5,13 @@ export function personalize(
   return template.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? "");
 }
 
+export function nameFromEmail(email: string): string {
+  const local = email.split("@")[0];
+  // Remove dots, numbers, underscores and capitalize
+  const clean = local.replace(/[._0-9-]/g, " ").trim().split(/\s+/)[0];
+  return clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase();
+}
+
 export function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }

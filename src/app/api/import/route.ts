@@ -1,12 +1,12 @@
 import { getSupabase } from "@/lib/supabase";
-import { isValidEmail } from "@/lib/utils";
+import { isValidEmail, nameFromEmail } from "@/lib/utils";
 import { NextRequest, NextResponse } from "next/server";
 
 interface ImportContact {
-  name: string;
+  name?: string;
   email: string;
-  company: string;
-  country: string;
+  company?: string;
+  country?: string;
   notes?: string;
 }
 
@@ -23,12 +23,12 @@ function parseCSV(text: string): ImportContact[] {
     headers.forEach((h, idx) => {
       obj[h] = values[idx] || "";
     });
-    if (obj.name && obj.email && obj.company && obj.country) {
+    if (obj.email) {
       contacts.push({
-        name: obj.name,
+        name: obj.name || undefined,
         email: obj.email,
-        company: obj.company,
-        country: obj.country,
+        company: obj.company || undefined,
+        country: obj.country || undefined,
         notes: obj.notes,
       });
     }
@@ -64,10 +64,10 @@ export async function POST(req: NextRequest) {
   }
 
   const rows = contacts.map((c) => ({
-    name: c.name,
+    name: c.name || nameFromEmail(c.email),
     email: c.email.toLowerCase().trim(),
-    company: c.company,
-    country: c.country,
+    company: c.company || "",
+    country: c.country || "",
     notes: c.notes || null,
     status: "not_contacted" as const,
     has_replied: false,

@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
   for (const contact of contacts) {
     if (contact.follow_up_count >= 3) continue;
 
-    const script = getScriptByFollowUpCount(contact.follow_up_count);
+    const script = await getScriptByFollowUpCount(contact.follow_up_count);
     const vars = {
       name: contact.name,
       company: contact.company,

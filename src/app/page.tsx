@@ -7,6 +7,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { ImportModal } from "@/components/ImportModal";
 import { AddContactModal } from "@/components/AddContactModal";
 import { SettingsModal } from "@/components/SettingsModal";
+import { ScriptsModal } from "@/components/ScriptsModal";
 
 export default function Dashboard() {
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -17,6 +18,7 @@ export default function Dashboard() {
   const [importOpen, setImportOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [scriptsOpen, setScriptsOpen] = useState(false);
   const [notification, setNotification] = useState<{
     type: "success" | "error";
     text: string;
@@ -120,6 +122,12 @@ export default function Dashboard() {
               className="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50"
             >
               Config Email
+            </button>
+            <button
+              onClick={() => setScriptsOpen(true)}
+              className="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50"
+            >
+              Templates
             </button>
             <button
               onClick={() => setImportOpen(true)}
@@ -290,6 +298,10 @@ export default function Dashboard() {
       <SettingsModal
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
+      />
+      <ScriptsModal
+        open={scriptsOpen}
+        onClose={() => setScriptsOpen(false)}
       />
     </div>
   );

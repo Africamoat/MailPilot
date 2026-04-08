@@ -1,44 +1,57 @@
+import { getSupabase } from "./supabase";
+
 export interface EmailScript {
   id: string;
+  script_order: number;
   name: string;
   subject: string;
   body: string;
 }
 
-export const emailScripts: EmailScript[] = [
+// Fallback scripts if DB is empty
+const fallbackScripts: EmailScript[] = [
   {
-    id: "script_1",
+    id: "fallback_0",
+    script_order: 0,
     name: "Premier contact",
     subject: "Collaboration avec {{company}}",
-    body: `<p>Bonjour {{name}},</p>
-<p>Je vois que <strong>{{company}}</strong> est basé en {{country}} et je serais ravi d'échanger avec vous sur une potentielle collaboration.</p>
-<p>Seriez-vous disponible pour un bref appel cette semaine ?</p>
-<p>Cordialement</p>`,
+    body: `<p>Bonjour {{name}},</p><p>Je vois que <strong>{{company}}</strong> est basé en {{country}} et je serais ravi d'échanger avec vous.</p><p>Cordialement</p>`,
   },
   {
-    id: "script_2",
+    id: "fallback_1",
+    script_order: 1,
     name: "Relance 1",
     subject: "Re: Collaboration avec {{company}}",
-    body: `<p>Bonjour {{name}},</p>
-<p>Je me permets de relancer mon précédent message concernant une collaboration avec <strong>{{company}}</strong>.</p>
-<p>N'hésitez pas à me faire signe si vous êtes intéressé.</p>
-<p>Cordialement</p>`,
+    body: `<p>Bonjour {{name}},</p><p>Je me permets de relancer mon précédent message concernant <strong>{{company}}</strong>.</p><p>Cordialement</p>`,
   },
   {
-    id: "script_3",
+    id: "fallback_2",
+    script_order: 2,
     name: "Relance 2 (dernière)",
     subject: "Dernière tentative — {{company}}",
-    body: `<p>Bonjour {{name}},</p>
-<p>C'est ma dernière tentative pour vous joindre. Si le timing n'est pas bon, je comprendrai tout à fait.</p>
-<p>Si vous souhaitez en discuter plus tard, n'hésitez pas à revenir vers moi.</p>
-<p>Bonne continuation à <strong>{{company}}</strong>.</p>
-<p>Cordialement</p>`,
+    body: `<p>Bonjour {{name}},</p><p>C'est ma dernière tentative pour vous joindre.</p><p>Bonne continuation à <strong>{{company}}</strong>.</p><p>Cordialement</p>`,
   },
 ];
 
-export function getScriptByFollowUpCount(count: number): EmailScript {
-  if (count >= emailScripts.length) {
-    return emailScripts[emailScripts.length - 1];
+export async function getScripts(): Promise<EmailScript[]> {
+  try {
+    const supabase = getSupabase();
+    const { data } = await supabase
+      .from("email_scripts")
+      .select("*")
+      .order("script_order", { ascending: true });
+
+    if (data && data.length > 0) return data;
+  } catch {
+    // fallback
   }
-  return emailScripts[count];
+  return fallbackScripts;
+}
+
+export async function getScriptByFollowUpCount(
+  count: number
+): Promise<EmailScript> {
+  const scripts = await getScripts();
+  if (count >= scripts.length) return scripts[scripts.length - 1];
+  return scripts[count];
 }
