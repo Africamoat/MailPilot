@@ -66,19 +66,39 @@ export default function Dashboard() {
     setTimeout(() => setNotification(null), 4000);
   }
 
-  async function handleSendCampaign() {
-    if (!confirm("Envoyer la campagne aux contacts éligibles ?")) return;
+  async function handleSendNew() {
+    if (!confirm(`Contacter les ${stats.not_contacted} nouveau(x) contact(s) ?`)) return;
     setSending(true);
     try {
       const res = await fetch("/api/send", { method: "POST" });
       const data = await res.json();
       if (!res.ok) {
         notify("error", data.error || "Erreur lors de l'envoi");
+      } else if (data.sent === 0) {
+        notify("error", data.message || "Aucun contact à contacter");
       } else {
-        notify(
-          "success",
-          `${data.sent} email(s) envoyé(s), ${data.failed || 0} échoué(s)`
-        );
+        notify("success", `${data.sent} email(s) envoyé(s), ${data.failed || 0} échoué(s)`);
+        fetchContacts();
+      }
+    } catch {
+      notify("error", "Erreur réseau");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function handleFollowUp() {
+    if (!confirm("Relancer tous les contacts en attente ?")) return;
+    setSending(true);
+    try {
+      const res = await fetch("/api/followup", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        notify("error", data.error || "Erreur lors de la relance");
+      } else if (data.sent === 0) {
+        notify("error", data.message || "Aucun contact à relancer");
+      } else {
+        notify("success", `${data.sent} relance(s) envoyée(s), ${data.failed || 0} échoué(s)`);
         fetchContacts();
       }
     } catch {
@@ -110,21 +130,18 @@ export default function Dashboard() {
   }
 
   async function sendSingle(id: string) {
-    const res = await fetch(`/api/contact/${id}`, {
-      method: "PATCH",
+    const res = await fetch("/api/send-one", {
+      method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "follow_up" }),
+      body: JSON.stringify({ id }),
     });
+    const data = await res.json();
     if (res.ok) {
-      const sendRes = await fetch("/api/send", { method: "POST" });
-      const data = await sendRes.json();
-      if (sendRes.ok && data.sent > 0) {
-        notify("success", "Email envoyé");
-      } else {
-        notify("error", data.error || `Échec: ${data.failed || 0} erreur(s)`);
-      }
-      fetchContacts();
+      notify("success", `Email envoyé à ${data.email}`);
+    } else {
+      notify("error", data.error || "Erreur d'envoi");
     }
+    fetchContacts();
   }
 
   return (
@@ -170,11 +187,18 @@ export default function Dashboard() {
               + Contact
             </button>
             <button
-              onClick={handleSendCampaign}
+              onClick={handleFollowUp}
+              disabled={sending}
+              className="px-3 py-1.5 text-sm bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:opacity-50"
+            >
+              {sending ? "Envoi..." : "Relancer"}
+            </button>
+            <button
+              onClick={handleSendNew}
               disabled={sending}
               className="px-3 py-1.5 text-sm bg-black text-white rounded-lg hover:bg-gray-800 disabled:opacity-50"
             >
-              {sending ? "Envoi..." : "Envoyer campagne"}
+              {sending ? "Envoi..." : "Contacter les nouveaux"}
             </button>
           </div>
         </div>

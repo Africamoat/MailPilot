@@ -7,27 +7,30 @@ import { NextResponse } from "next/server";
 export async function POST() {
   const supabase = getSupabase();
 
-  // Only new contacts (not_contacted)
+  // Contacts already contacted but not replied, due for follow-up
   const { data: contacts, error } = await supabase
     .from("contacts")
     .select("*")
-    .eq("status", "not_contacted")
-    .eq("has_replied", false);
+    .in("status", ["contacted", "follow_up"])
+    .eq("has_replied", false)
+    .lte("next_follow_up_at", new Date().toISOString());
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
   if (!contacts || contacts.length === 0) {
-    return NextResponse.json({ sent: 0, message: "Aucun nouveau contact à contacter" });
+    return NextResponse.json({ sent: 0, message: "Aucun contact à relancer" });
   }
 
-  const eligible = contacts.filter((c) => !isToday(c.last_contacted_at));
+  const eligible = contacts.filter(
+    (c) => !isToday(c.last_contacted_at) && c.follow_up_count < 3
+  );
   const batch = eligible.slice(0, 20);
   const results: { email: string; success: boolean; error?: string }[] = [];
 
   for (const contact of batch) {
-    const script = await getScriptByFollowUpCount(0);
+    const script = await getScriptByFollowUpCount(contact.follow_up_count);
     const vars = {
       name: contact.name,
       company: contact.company,
@@ -44,9 +47,9 @@ export async function POST() {
       await supabase
         .from("contacts")
         .update({
-          status: "contacted",
+          status: "follow_up",
           last_contacted_at: new Date().toISOString(),
-          follow_up_count: 1,
+          follow_up_count: contact.follow_up_count + 1,
           next_follow_up_at: addDays(3),
         })
         .eq("id", contact.id);
