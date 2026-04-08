@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --no-import-alias --use-npm)",
+      "Bash(npx create-next-app@latest mailpilot --typescript --tailwind --eslint --app --src-dir --no-import-alias --use-npm)",
+      "Bash(npx:*)",
+      "Read(//c/Users/LENOVO/AppData/Local/Temp/claude/C--Users-LENOVO-Desktop-MailPilot/999c9ca2-3de6-428a-9fab-09adbec2061f/tasks/**)",
+      "Bash(cp -r mailpilot-tmp/* .)",
+      "Bash(cp mailpilot-tmp/.* .)",
+      "Bash(npm install:*)",
+      "Bash(tasklist)",
+      "Bash(find node_modules -type f -delete)",
+      "Bash(find node_modules -type d -empty -delete)",
+      "Bash(gh auth:*)",
+      "mcp__claude_ai_Supabase__list_organizations",
+      "mcp__claude_ai_Supabase__list_projects",
+      "mcp__claude_ai_Supabase__get_cost",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
+    ]
+  }
+}
