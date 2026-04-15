@@ -1,7 +1,7 @@
 import { getSupabase } from "@/lib/supabase";
 import { sendEmail } from "@/lib/resend";
 import { getScriptByFollowUpCount } from "@/lib/scripts";
-import { personalize, addDays } from "@/lib/utils";
+import { personalize, addDays, isToday } from "@/lib/utils";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
   const { data: contacts, error } = await supabase
     .from("contacts")
     .select("*")
-    .eq("status", "contacted")
+    .in("status", ["contacted", "follow_up"])
     .eq("has_replied", false)
     .lte("next_follow_up_at", now);
 
@@ -28,10 +28,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ followed_up: 0 });
   }
 
+  const eligible = contacts.filter(
+    (c) => !isToday(c.last_contacted_at) && c.follow_up_count < 3
+  );
+  const batch = eligible.slice(0, 20);
   let sent = 0;
 
-  for (const contact of contacts) {
-    if (contact.follow_up_count >= 3) continue;
+  for (const contact of batch) {
 
     const script = await getScriptByFollowUpCount(contact.follow_up_count);
     const vars = {

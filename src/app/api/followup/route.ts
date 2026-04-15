@@ -2,18 +2,28 @@ import { getSupabase } from "@/lib/supabase";
 import { sendEmail } from "@/lib/resend";
 import { getScriptByFollowUpCount } from "@/lib/scripts";
 import { personalize, isToday, addDays } from "@/lib/utils";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function POST() {
+export async function POST(req: NextRequest) {
   const supabase = getSupabase();
 
-  // Contacts already contacted but not replied, due for follow-up
-  const { data: contacts, error } = await supabase
+  // Optional: only follow up specific contacts
+  const body = await req.json().catch(() => ({}));
+  const selectedIds: string[] | undefined = body.ids;
+
+  let query = supabase
     .from("contacts")
     .select("*")
     .in("status", ["contacted", "follow_up"])
-    .eq("has_replied", false)
-    .lte("next_follow_up_at", new Date().toISOString());
+    .eq("has_replied", false);
+
+  if (selectedIds && selectedIds.length > 0) {
+    query = query.in("id", selectedIds);
+  } else {
+    query = query.lte("next_follow_up_at", new Date().toISOString());
+  }
+
+  const { data: contacts, error } = await query;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -23,9 +33,11 @@ export async function POST() {
     return NextResponse.json({ sent: 0, message: "Aucun contact à relancer" });
   }
 
-  const eligible = contacts.filter(
-    (c) => !isToday(c.last_contacted_at) && c.follow_up_count < 3
-  );
+  const eligible = selectedIds
+    ? contacts.filter((c) => c.follow_up_count < 3)
+    : contacts.filter(
+        (c) => !isToday(c.last_contacted_at) && c.follow_up_count < 3
+      );
   const batch = eligible.slice(0, 20);
   const results: { email: string; success: boolean; error?: string }[] = [];
 

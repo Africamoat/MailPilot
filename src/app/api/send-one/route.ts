@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
     await supabase
       .from("contacts")
       .update({
-        status: "contacted",
+        status: contact.follow_up_count > 0 ? "follow_up" : "contacted",
         last_contacted_at: new Date().toISOString(),
         follow_up_count: contact.follow_up_count + 1,
         next_follow_up_at: addDays(3),

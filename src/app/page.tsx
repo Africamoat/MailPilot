@@ -28,6 +28,7 @@ export default function Dashboard() {
   const [addOpen, setAddOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [scriptsOpen, setScriptsOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [notification, setNotification] = useState<{
     type: "success" | "error";
     text: string;
@@ -88,11 +89,39 @@ export default function Dashboard() {
     }
   }
 
-  async function handleFollowUp() {
-    if (!confirm("Relancer tous les contacts en attente ?")) return;
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    const selectable = filteredContacts.filter(
+      (c) => c.status !== "replied" && c.status !== "not_contacted"
+    );
+    if (selectable.every((c) => selectedIds.has(c.id))) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(selectable.map((c) => c.id)));
+    }
+  }
+
+  async function handleFollowUp(useSelection: boolean) {
+    const ids = useSelection ? Array.from(selectedIds) : [];
+    const msg = useSelection
+      ? `Relancer ${ids.length} contact(s) sélectionné(s) ?`
+      : "Relancer tous les contacts en attente ?";
+    if (!confirm(msg)) return;
     setSending(true);
     try {
-      const res = await fetch("/api/followup", { method: "POST" });
+      const res = await fetch("/api/followup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(useSelection ? { ids } : {}),
+      });
       const data = await res.json();
       if (!res.ok) {
         notify("error", data.error || "Erreur lors de la relance");
@@ -100,6 +129,7 @@ export default function Dashboard() {
         notify("error", data.message || "Aucun contact à relancer");
       } else {
         notify("success", `${data.sent} relance(s) envoyée(s), ${data.failed || 0} échoué(s)`);
+        setSelectedIds(new Set());
         fetchContacts();
       }
     } catch {
@@ -196,12 +226,21 @@ export default function Dashboard() {
             >
               + Contact
             </button>
+            {selectedIds.size > 0 && (
+              <button
+                onClick={() => handleFollowUp(true)}
+                disabled={sending}
+                className="px-3 py-1.5 text-sm bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:opacity-50"
+              >
+                {sending ? "Envoi..." : `Relancer (${selectedIds.size})`}
+              </button>
+            )}
             <button
-              onClick={handleFollowUp}
+              onClick={() => handleFollowUp(false)}
               disabled={sending}
-              className="px-3 py-1.5 text-sm bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:opacity-50"
+              className="px-3 py-1.5 text-sm border border-yellow-600 text-yellow-700 rounded-lg hover:bg-yellow-50 disabled:opacity-50"
             >
-              {sending ? "Envoi..." : "Relancer"}
+              {sending ? "Envoi..." : "Relancer tout"}
             </button>
             <button
               onClick={handleSendNew}
@@ -262,6 +301,21 @@ export default function Dashboard() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-gray-50">
+                  <th className="px-4 py-3 w-8">
+                    <input
+                      type="checkbox"
+                      onChange={toggleSelectAll}
+                      checked={
+                        filteredContacts.filter(
+                          (c) => c.status !== "replied" && c.status !== "not_contacted"
+                        ).length > 0 &&
+                        filteredContacts
+                          .filter((c) => c.status !== "replied" && c.status !== "not_contacted")
+                          .every((c) => selectedIds.has(c.id))
+                      }
+                      className="rounded"
+                    />
+                  </th>
                   <th className="text-left px-4 py-3 font-medium">Nom</th>
                   <th className="text-left px-4 py-3 font-medium">Email</th>
                   <th className="text-left px-4 py-3 font-medium">Entreprise</th>
@@ -275,19 +329,29 @@ export default function Dashboard() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={8} className="text-center py-8 text-gray-400">
+                    <td colSpan={9} className="text-center py-8 text-gray-400">
                       Chargement...
                     </td>
                   </tr>
                 ) : filteredContacts.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="text-center py-8 text-gray-400">
+                    <td colSpan={9} className="text-center py-8 text-gray-400">
                       Aucun contact
                     </td>
                   </tr>
                 ) : (
                   filteredContacts.map((c) => (
-                    <tr key={c.id} className="border-b hover:bg-gray-50">
+                    <tr key={c.id} className={`border-b hover:bg-gray-50 ${selectedIds.has(c.id) ? "bg-yellow-50" : ""}`}>
+                      <td className="px-4 py-3">
+                        {c.status !== "replied" && c.status !== "not_contacted" ? (
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(c.id)}
+                            onChange={() => toggleSelect(c.id)}
+                            className="rounded"
+                          />
+                        ) : null}
+                      </td>
                       <td className="px-4 py-3 font-medium">
                         <EditableCell
                           value={c.name}
